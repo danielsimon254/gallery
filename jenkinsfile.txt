@@ -1,0 +1,47 @@
+pipeline {
+    agent any  // 
+    
+    environment {
+        NODE_ENV = 'production'
+        HEROKU_APP_NAME = 'danielsimon-app'  // Heroku app name
+        HEROKU_API_KEY = credentials('HRKU-f5bd0574-c37f-4e52-9fbf-c9cc10470167') // Heroku API key credentials
+    }
+
+    stages {
+        stage('Install Dependencies') {
+            steps {
+                script {
+                    // Install Node.js dependencies
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('Deploy to Heroku') {
+            steps {
+                script {
+                    // Log in to Heroku CLI using API key
+                    sh '''
+                    echo $HEROKU_API_KEY | heroku auth:token
+                    git remote add heroku https://git.heroku.com/danielsimon-app.git
+                    git push heroku master
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline execution finished."
+        }
+    }
+}
