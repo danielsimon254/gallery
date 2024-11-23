@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        HEROKU_API_KEY = credentials('heroku') // Heroku API key ID from Jenkins credentials
+        HEROKU_API_KEY = credentials('3ae377d9-8b57-43a5-95d8-4d0413e2ae1b') // Heroku API key ID from Jenkins credentials
         HEROKU_APP_NAME = 'danielsimon-app'           // Your Heroku app name
         GIT_REPO = 'https://github.com/danielsimon254/gallery.git' // Your GitHub repo
     }
@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: "${GIT_REPO}" // Replace 'main' if using a different branch
+                git branch: 'master', url: "${GIT_REPO}" // Replace 'main' if using a different branch
             }
         }
 
@@ -18,9 +18,20 @@ pipeline {
             steps {
                 sh '''
                 if ! command -v heroku &> /dev/null; then
-                    curl https://cli-assets.heroku.com/install.sh | sh
+                    curl https://cli-assets.heroku.com/install.sh | sudo -S sh
                 fi
                 '''
+            }
+        }
+        
+         stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+        stage('Start Server') {
+            steps {
+                sh 'node server.js'
             }
         }
 
@@ -34,7 +45,7 @@ pipeline {
             steps {
                 sh '''
                 git remote add heroku https://git.heroku.com/${HEROKU_APP_NAME}.git || true
-                git push heroku main --force
+                git push heroku master --force
                 '''
             }
         }
