@@ -1,17 +1,35 @@
 pipeline {
-    agent any  // 
+    agent any  // Runs on any available agent
     
     environment {
         NODE_ENV = 'production'
-        HEROKU_APP_NAME = 'danielsimon-app'  // Heroku app name
-        HEROKU_API_KEY = credentials('HRKU-f5bd0574-c37f-4e52-9fbf-c9cc10470167') // Heroku API key credentials
+        HEROKU_APP_NAME = 'danielsimon-app'  // Replace with your actual Heroku app name
+        HEROKU_API_KEY = credentials('HRKU-f5bd0574-c37f-4e52-9fbf-c9cc10470167') // Reference to your stored Heroku API Key
     }
 
     stages {
+        stage('Install Heroku CLI') {
+            steps {
+                script {
+                    // Install Heroku CLI if it's not installed
+                    echo "Installing Heroku CLI..."
+                    sh '''
+                    if ! command -v heroku &> /dev/null; then
+                        echo "Heroku CLI not found, installing..."
+                        curl https://cli-assets.heroku.com/install.sh | sh
+                    else
+                        echo "Heroku CLI already installed"
+                    fi
+                    '''
+                }
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 script {
                     // Install Node.js dependencies
+                    echo "Installing dependencies..."
                     sh 'npm install'
                 }
             }
@@ -20,6 +38,8 @@ pipeline {
         stage('Build') {
             steps {
                 script {
+                    // Build your application (optional for frontend apps like React)
+                    echo "Building the application..."
                     sh 'npm run build'
                 }
             }
@@ -28,11 +48,13 @@ pipeline {
         stage('Deploy to Heroku') {
             steps {
                 script {
-                    // Log in to Heroku CLI using API key
+                    // Authenticate with Heroku using the API key
+                    echo "Authenticating with Heroku..."
                     sh '''
                     echo $HEROKU_API_KEY | heroku auth:token
-                    git remote add heroku https://git.heroku.com/danielsimon-app.git
-                    git push heroku master
+                    git remote remove heroku || true  // Remove any existing Heroku remote if it exists
+                    git remote add heroku https://git.heroku.com/$HEROKU_APP_NAME.git
+                    git push heroku master  // Push to the Heroku master branch
                     '''
                 }
             }
