@@ -44,18 +44,20 @@ pipeline {
                 script {
                     // Authenticate with Heroku using the API key
                     echo "Authenticating with Heroku..."
+
+                    // Explicit Heroku authentication with API key
                     sh '''
                     echo $HEROKU_API_KEY | heroku auth:token
                     '''
                     
-                    // Configure Heroku remote and deploy
+                    // Configure Heroku remote
                     echo "Configuring Heroku remote..."
                     sh '''
-                    git remote remove heroku || true  # Remove existing Heroku remote
+                    git remote remove heroku || true
                     git remote add heroku https://git.heroku.com/$HEROKU_APP_NAME.git
                     '''
 
-                    // Push to Heroku using git
+                    // Push to Heroku master branch
                     echo "Pushing code to Heroku..."
                     sh 'git push heroku master'  // Push to Heroku's master branch
                 }
