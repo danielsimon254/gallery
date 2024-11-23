@@ -1,46 +1,36 @@
 pipeline {
-    agent any  // Runs on any available agent
-    
+    agent any  // Use any available agent
+
     environment {
-        NODE_ENV = 'production'
-        HEROKU_APP_NAME = 'danielsimon-app'  // Replace with your actual Heroku app name
-        HEROKU_API_KEY = credentials('HRKU-f5bd0574-c37f-4e52-9fbf-c9cc10470167') // Reference to your stored Heroku API Key
+        GITHUB_TOKEN = credentials('github-token')  // Store your GitHub token securely in Jenkins credentials
+        HEROKU_API_KEY = credentials('HRKU-f5bd0574-c37f-4e52-9fbf-c9cc10470167')  // Use the Heroku API Key from Jenkins credentials
+        HEROKU_APP_NAME = 'danielsimon-app'  // Your Heroku app name
+        GITHUB_REPO = 'https://github.com/danielsimon254/gallery'  // Your GitHub repository URL
     }
 
     stages {
-        stage('Install Heroku CLI') {
+        stage('Checkout SCM') {
             steps {
-                script {
-                    // Install Heroku CLI if it's not installed
-                    echo "Installing Heroku CLI..."
-                    sh '''
-                    if ! command -v heroku &> /dev/null; then
-                        echo "Heroku CLI not found, installing..."
-                        curl https://cli-assets.heroku.com/install.sh | sh
-                    else
-                        echo "Heroku CLI already installed"
-                    fi
-                    '''
-                }
+                checkout scm  // Checkout the repository from GitHub
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Push Jenkinsfile to GitHub') {
             steps {
                 script {
-                    // Install Node.js dependencies
-                    echo "Installing dependencies..."
-                    sh 'npm install'
-                }
-            }
-        }
-
-        stage('Build') {
-            steps {
-                script {
-                    // Build your application (optional for frontend apps like React)
-                    echo "Building the application..."
-                    sh 'npm run build'
+                    // Ensure the GitHub token is available
+                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                        // Set up the GitHub remote repository with authentication
+                        sh 'git config --global user.email "your-email@example.com"'
+                        sh 'git config --global user.name "Your Name"'
+                        // Ensure you're on the correct branch (e.g., master or main)
+                        sh 'git checkout master'  // or change to the desired branch
+                        // Add changes to Jenkinsfile or other files if needed
+                        sh 'git add Jenkinsfile'  // Add the Jenkinsfile
+                        sh 'git commit -m "Updated Jenkinsfile for Heroku deployment"'
+                        // Push changes to GitHub using the token
+                        sh 'git push https://${GITHUB_TOKEN}@github.com/danielsimon254/gallery.git master'
+                    }
                 }
             }
         }
@@ -52,18 +42,28 @@ pipeline {
                     echo "Authenticating with Heroku..."
                     sh '''
                     echo $HEROKU_API_KEY | heroku auth:token
-                    git remote remove heroku || true  // Remove any existing Heroku remote if it exists
-                    git remote add heroku https://git.heroku.com/$HEROKU_APP_NAME.git
-                    git push heroku master  // Push to the Heroku master branch
                     '''
+                    // Remove any existing Heroku remote and set it up
+                    echo "Configuring Git remote for Heroku..."
+                    sh '''
+                    git remote remove heroku || true  # Remove any existing Heroku remote if it exists
+                    git remote add heroku https://git.heroku.com/$HEROKU_APP_NAME.git
+                    '''
+
+                    // Push to Heroku (adjust branch as needed, default is 'main' on Heroku)
+                    echo "Pushing to Heroku..."
+                    sh 'git push heroku master'  // Change to 'main' if your Heroku app uses 'main'
                 }
             }
         }
     }
 
     post {
-        always {
-            echo "Pipeline execution finished."
+        success {
+            echo 'Pipeline executed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed.'
         }
     }
 }
