@@ -2,75 +2,50 @@ pipeline {
     agent any
 
     environment {
-        GITHUB_TOKEN = credentials('github-token')  // GitHub Personal Access Token stored in Jenkins
-        HEROKU_API_KEY = credentials('HRKU-f5bd0574-c37f-4e52-9fbf-c9cc10470167')  // Heroku API Key
-        HEROKU_APP_NAME = 'danielsimon-app'  // Heroku app name
+        HEROKU_API_KEY = credentials('heroku') // Heroku API key ID from Jenkins credentials
+        HEROKU_APP_NAME = 'danielsimon-app'           // Your Heroku app name
+        GIT_REPO = 'https://github.com/danielsimon254/gallery.git' // Your GitHub repo
     }
 
     stages {
-        stage('Checkout SCM') {
+        stage('Clone Repository') {
             steps {
-                checkout scm  // Checkout the repository from GitHub
+                git branch: 'main', url: "${GIT_REPO}" // Replace 'main' if using a different branch
             }
         }
 
-        stage('Push Jenkinsfile to GitHub') {
+        stage('Install Heroku CLI') {
             steps {
-                script {
-                    // Set up Git configuration for committing to GitHub
-                    sh 'git config --global user.email "simondaniel254@gmail.com"'
-                    sh 'git config --global user.name "danielsimon254"'
+                sh '''
+                if ! command -v heroku &> /dev/null; then
+                    curl https://cli-assets.heroku.com/install.sh | sh
+                fi
+                '''
+            }
+        }
 
-                    // Ensure we are on the correct branch
-                    sh 'git checkout master'  // You can change this to 'main' or another branch if needed
-
-                    // Check if there are any changes to commit
-                    def changes = sh(script: 'git status --porcelain', returnStdout: true).trim()
-                    if (changes) {
-                        // If changes exist, add and commit them
-                        sh 'git add Jenkinsfile'
-                        sh 'git commit -m "Update Jenkinsfile for Heroku auto-deploy"'
-                        // Push changes to GitHub using the GitHub token
-                        sh 'git push https://${GITHUB_TOKEN}@github.com/danielsimon254/gallery.git master'  // Change 'master' if using a different branch
-                    } else {
-                        echo "No changes detected, skipping commit."
-                    }
-                }
+        stage('Login to Heroku') {
+            steps {
+                sh 'echo $HEROKU_API_KEY | heroku auth:token | heroku auth:whoami'
             }
         }
 
         stage('Deploy to Heroku') {
             steps {
-                script {
-                    // Authenticate with Heroku using the API key
-                    echo "Authenticating with Heroku..."
-
-                    // Explicit Heroku authentication with API key
-                    sh '''
-                    echo $HEROKU_API_KEY | heroku auth:token
-                    '''
-                    
-                    // Configure Heroku remote
-                    echo "Configuring Heroku remote..."
-                    sh '''
-                    git remote remove heroku || true
-                    git remote add heroku https://git.heroku.com/$HEROKU_APP_NAME.git
-                    '''
-
-                    // Push to Heroku master branch
-                    echo "Pushing code to Heroku..."
-                    sh 'git push heroku master'  // Push to Heroku's master branch
-                }
+                sh '''
+                git remote add heroku https://git.heroku.com/${HEROKU_APP_NAME}.git || true
+                git push heroku main --force
+                '''
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline executed successfully.'
+            echo 'Deployment to Heroku was successful!'
         }
         failure {
-            echo 'Pipeline failed.'
+            echo 'Deployment to Heroku failed. Check the logs for details.'
         }
     }
 }
