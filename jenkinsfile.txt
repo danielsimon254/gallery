@@ -2,9 +2,16 @@ pipeline {
     agent any  // Use any available agent
 
     environment {
-        GITHUB_TOKEN = credentials('github-token')  // Store your GitHub token securely in Jenkins credentials
-        HEROKU_API_KEY = credentials('HRKU-f5bd0574-c37f-4e52-9fbf-c9cc10470167')  // Use the Heroku API Key from Jenkins credentials
+        // GitHub Token stored securely in Jenkins
+        GITHUB_TOKEN = credentials('github-token')  // GitHub Personal Access Token (to be added to Jenkins credentials)
+        
+        // Heroku API Key stored securely in Jenkins
+        HEROKU_API_KEY = credentials('HRKU-f5bd0574-c37f-4e52-9fbf-c9cc10470167')  // Heroku API Key (already added to Jenkins credentials)
+
+        // Heroku app name
         HEROKU_APP_NAME = 'danielsimon-app'  // Your Heroku app name
+
+        // GitHub repository URL
         GITHUB_REPO = 'https://github.com/danielsimon254/gallery'  // Your GitHub repository URL
     }
 
@@ -18,18 +25,21 @@ pipeline {
         stage('Push Jenkinsfile to GitHub') {
             steps {
                 script {
-                    // Ensure the GitHub token is available
+                    // Ensure the GitHub token is available for pushing
                     withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
-                        // Set up the GitHub remote repository with authentication
-                        sh 'git config --global user.email "your-email@example.com"'
-                        sh 'git config --global user.name "Your Name"'
-                        // Ensure you're on the correct branch (e.g., master or main)
-                        sh 'git checkout master'  // or change to the desired branch
-                        // Add changes to Jenkinsfile or other files if needed
-                        sh 'git add Jenkinsfile'  // Add the Jenkinsfile
+                        // Configure GitHub user email and username
+                        sh 'git config --global user.email "simondaniel254@gmail.com"'  // GitHub email
+                        sh 'git config --global user.name "danielsimon254"'  // GitHub username
+
+                        // Ensure you're on the correct branch (master or main)
+                        sh 'git checkout master'  // Change to the desired branch if needed
+
+                        // Add and commit changes to the Jenkinsfile or any other file
+                        sh 'git add Jenkinsfile'  // Add the Jenkinsfile or other changes
                         sh 'git commit -m "Updated Jenkinsfile for Heroku deployment"'
-                        // Push changes to GitHub using the token
-                        sh 'git push https://${GITHUB_TOKEN}@github.com/danielsimon254/gallery.git master'
+
+                        // Push changes to GitHub using the token for authentication
+                        sh 'git push https://${GITHUB_TOKEN}@github.com/danielsimon254/gallery.git master'  // Push to the repository
                     }
                 }
             }
@@ -43,16 +53,17 @@ pipeline {
                     sh '''
                     echo $HEROKU_API_KEY | heroku auth:token
                     '''
-                    // Remove any existing Heroku remote and set it up
+
+                    // Remove any existing Heroku remote and set it up for deployment
                     echo "Configuring Git remote for Heroku..."
                     sh '''
-                    git remote remove heroku || true  # Remove any existing Heroku remote if it exists
+                    git remote remove heroku || true  # Remove any existing Heroku remote
                     git remote add heroku https://git.heroku.com/$HEROKU_APP_NAME.git
                     '''
 
-                    // Push to Heroku (adjust branch as needed, default is 'main' on Heroku)
+                    // Deploy to Heroku (push the changes)
                     echo "Pushing to Heroku..."
-                    sh 'git push heroku master'  // Change to 'main' if your Heroku app uses 'main'
+                    sh 'git push heroku master'  // Push the code to Heroku (default is 'master' branch)
                 }
             }
         }
