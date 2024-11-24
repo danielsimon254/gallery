@@ -3,14 +3,14 @@ pipeline {
 
     environment {
         HEROKU_API_KEY = credentials('3ae377d9-8b57-43a5-95d8-4d0413e2ae1b') // Heroku API key ID from Jenkins credentials
-        HEROKU_APP_NAME = 'danielsimon-app'           // Your Heroku app name
-        GIT_REPO = 'https://github.com/danielsimon254/gallery.git' // Your GitHub repo
+        HEROKU_APP_NAME = 'danielsimon-app'           // Heroku app name
+        GIT_REPO = 'https://github.com/danielsimon254/gallery.git' // GitHub repo
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'master', url: "${GIT_REPO}" // Replace 'main' if using a different branch
+                git branch: 'master', url: "${GIT_REPO}" // branch
             }
         }
 
@@ -24,11 +24,24 @@ pipeline {
             }
         }
         
-         stage('Install Dependencies') {
+        stage('Install Dependencies') {
             steps {
                 sh 'npm install'
             }
         }
+
+        stage('Build') {
+            steps {
+                sh 'npm run build'  // build script in package.json
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'npm test'  // test script in package.json
+            }
+        }
+
         stage('Start Server') {
             steps {
                 sh 'node server.js'
